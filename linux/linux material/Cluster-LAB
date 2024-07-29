@@ -1,0 +1,200 @@
+Steps:
+
+
+Before you begin make sure iptables , ip6tables , selinux is disabled && /etc/hosts is updated.
+
+
+
+ISCSI Target:
+============
+
+On Storage Node:
+
+yum install scsi-target-utils
+
+service name : tgtd
+
+/etc/tgt/targets.conf
+<target iqn>
+backing-store /dev/disk
+</target>
+
+
+iqn format - iqn.yyyy-mm.naming-authority:unique
+	     iqn.2017-03.com.example.storage:iscsitarget
+
+
+ISCSI Initiator:
+================
+
+On both node A and node B:
+
+yum install iscsi-initiator-utils
+service : iscsi , iscsid
+
+iscsiadm -m discovery -t sendtargets -p <target ip1>
+iscsiadm -m discovery -t sendtargets -p <target ip2>
+iscsiadm -m node -T <iqn> -p <ip> -l
+iscsiadm -m node -T <iqn> -p <ip> -u
+iscsiadm -m node -T <iqn> -p <ip1> -l
+iscsiadm -m node -T <iqn> -p <ip2> -l
+
+
+mpathconf --enable --with_multipathd y --with_chkconfig y --user_friendly_names y --find_multipaths y --with_module y
+cat /etc/multipath.conf | egrep -v "^#|^$"
+service multipathd restart
+multipath -ll
+
+
+
+
+Cluster
+=======
+
+
+1. Hostname Changes
+
+Storage - storage.cluster.com
+NodeA - nodea.cluster.com
+NodeB - nodeb.cluster.com
+
+
+2. Add /etc/hosts (3) entries in all the (3) nodes
+
+3. Reboot
+
+4. yum install httpd (on nodea and nodeb)
+
+
+5. yum install luci ; chkconfig luci on ; service luci start (on management node - storage.cluster.com)
+
+
+6. yum install ricci; chkconfig ricci on ; service ricci start (on cluster nodes - nodea.cluster.com & nodeb.cluster.com)
+
+
+7. set password for ricci on the cluster nodea and nodeb.
+
+	command : passwd ricci (and give redhat as the password)
+
+
+8. Access Luci web interface on base machine with URL -  https://storage.cluster.com:8084
+	
+	Login with root credentials.
+	Create a Cluster called - webcluster
+	join the 2 nodes
+
+
+9. Login to cluster nodes and check the cluster status:
+
+	clustat
+	cat /etc/cluster/cluster.conf
+	cman_tool status
+
+
+
+
+
+
+	
+
+10. Enable CLVMD on both nodes (nodea and nodeb)
+
+	lvmconf --enable-cluster
+
+
+11. On one of the nodes (either nodea or nodeb) create an LVM
+
+	pvcreate /dev/mapper/mpatha
+	vgcreate -cy clustervg /dev/mapper/mpaha
+	lvcreate -n clusterlv --size 500M clustervg
+
+
+12. On one of the nodes (either nodea or nodeb) create GFS2 file system
+
+	mkfs.gfs2 -j 3 -p lock_dlm -t webcluster:clusterlv /dev/mapper/clustervg-clusterlv
+
+
+13. On one of the nodes (either nodea or nodeb) mount GFS2 file system and create index.html page
+
+	mount /dev/mapper/clustervg-clusterlv /var/www/html
+	echo "Redhat HA cluster with GFS2" > /var/www/html/index.html
+
+
+14. After creating the index.html file unmount the GFS2 LVM 
+	
+	umount /dev/mapper/clustervg-clusterlv
+
+
+15. Login to LUCI URL  https://storage.cluster.com:8084 and create Resource (Service Group Components)
+
+	-> Configure Failover Domain: Define a failover domain called "webfailover" , enable "Priorotized" and "Restricted" options , set priority for the nodes.
+	
+	-> Configure Resources from Resources tab: 
+		Add -> GFS2 file system, provide name (as clusterlv), mount point as /var/www/html , Device /dev/clustervg/clusterlv, File System Type - GFS2, 
+	   and select "force Unmount" & "Reboot Host Node if Unmount Fails".
+		Add -> IP Address , specify an IP which is not being used and should be in the same network, Netmask bit as 24 , Enable "Monitory Link" & "Disable Updates to Static Routes" , Numberof seconds to sleep after removing an IP address
+		Add -> Apache , provide name "webservice" , server root "/etc/httpd" , config file "conf/httpd.conf" , httpd options - leave blank , shutdown wait - 3 seconds
+
+	-> Configure Service Group from Service Groups tab:
+		Add -> provide service name as "webservice" , Enable automatically start the service , Run Exclusive (don't modify) , Failover Domain - webfailover , Recovery Policy "Relocate" 
+		Add Resource -> IP Address
+		Add Resource -> GFS2
+		Add Resource -> Apache	
+
+16. Check the Cluster status:
+
+	clustatus
+	cman_tool status
+	cat /etc/cluster/cluster.conf
+	cman_tool version
+	cman_tool version -r
+	ccs_tool lsnode
+	
+ clusvcadm -r webhttp -m nodea.linux.com (from a slave node to specifically move to another node)
+ clusvcadm -r webhttp (from any node to relocate as per the priority). Here webhttp is the name of the service group.
+ clusvcadm -d webhttp (to disable a service)
+ clusvcadm -e webhttp (to enable a service)
+ clusvcadm -Z webhttp (to feeze a service , so it can't be relocated)
+ clusvcadm -U webhttp (to unfreeze)
+
+
+
+17. Create Fence Device
+
+	-> Navigate to Fencing tab and Add "Fence Virt (Multicast Mode)", Provide Name - "virtfence"
+
+	-> Navigate to Node tab, select a node  and add "Fence Method" provide any name (use node1 and node2 respectively) , Add Fence Instance and select the fence device "virtfence"
+
+	-> Repeat the same on the other node
+
+
+17.1. On the Base Machine
+
+	-> yum install fence-virtd fence-virtd-libvirt fence-virtd-multicast
+
+	-> dd if=/dev/urandom of=/etc/cluster/fence_xvm.key bs=4 count=1 (This will create a fence key)
+
+	-> Eexecute "fence_virtd -c" to configure fencing , accept the defaults except for your interface - input the interface device which is used to communicate to the virtual machines.
+
+	-> Now copy /etc/cluster/fence_xvm.key to the nodea and nodeb in same path (ie /etc/cluster/fence_xvm.key) 
+	-> Start "fence_virtd" daemon if not started already (enable in chkconfig as well)
+
+	-> To test fencing: check the active node using clustat command, "fence_xvm -o list" will list all the nodes in the virt-manager. From passive node execute "fence_node <active node name>" to fence the node. Check what happens to the cluster status and node.
+
+
+18. Configure Quorum Disk
+
+	-> Logon to one of the node and create a quorum disk
+	-> mkqdisk -c /dev/sda2 -l quorumdisk (to create a quorum disk layout)
+	-> mkqdisk -L (to list the quorum disk properties)
+
+18.1. Logon to LUCI web interface
+
+	-> Navigate to "Configure" tab , and then to "QDisk" tab, Enable "Use a Quorum Disk" , specify the label of the quorum disk "quorumdisk". 
+	-> Write the Heuristic Program "ping -c 1 <gateway ip of nodes>" , mark interval as "5", score as "1" , TKO as "12".
+	-> Specify "1" as the minimum total score.
+
+
+
+	
+

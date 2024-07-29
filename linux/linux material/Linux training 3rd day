@@ -1,0 +1,77 @@
+Disastor recovery
+==============
+IBM have own tool to recovery the disaster dc
+
+problem scenerios
+==========================
+Web server
+
+www.example.come 
+
+client 
+
+http://www.tecmint.com/35-practical-examples-of-linux-find-command/
+
+cron
+================
+by default all system config crons located in the 
+
+/etc/cron.d/
+
+discusssion about the /var/log/messages
+# Don't log private authentication messages!
+*.info;mail.none;authpriv.none;cron.none                /var/log/messages
+
+
+
+this period it facilites says that the mesasages to 
+
+
+/etc/fstab:
+=================
+Nfs filesystem mount
+
+    _netdev
+    The filesystem resides on a device that requires network access (used to prevent the system from attempting to mount these filesystems until the network has been enabled on the system).
+
+From sshfs man page:
+
+    -o delay_connect
+    delay connection to server
+
+======================================
+very important command = when physical disk 
+
+=============================
+
+RCA = root cause analasis
+=========
+
+Not able to mount the database
+latest satelite server version is 6.2
+
+Patching types
+==========================
+1)Local repository
+2)RHN
+3)Satelite
+4)capsule server
+
+============================
+
+1)update bash
+ 
+downgrade bash
+
+2)update rhel 6.7 to rhel 6.8
+
+3 roll back
+
+rpm -uvh --oldpackage newpackage
+yum update -y 
+yum history undo updated number to roll back the upgrade
+
+pvresize command it extend the physical disk upto last cylinder
+
+
+

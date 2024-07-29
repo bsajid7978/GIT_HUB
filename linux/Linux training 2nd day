@@ -1,0 +1,51 @@
+Network 
+============
+OSI model:
+=========
+
+1)physical layer -> datalink layer -> network layer -> transport layer -> session layer ->presentation layer -->Application layer
+   
+
+resolve.h 
+
+we can add max 3 name servers in the resolve.conf
+
+route: statice route and g.w 
+
+how to change the gateway in the server to primary if you have multiple nic's and different ip
+
+we need to change the file in /etc/sysconfig/network 
+
+udev :  it is set of rules and it updates the /devices in the server 
+========
+
+network bonding
+===============
+load balancing
+fault tolerance
+link aggress
+
+TCPDUMP COMMAND
+===============
+tcpdump -p udp port 123 -vvv -w /tmp/tcpdump.pcap
+
+123 port for ntp
+
+
+
+Linux torvads
+==================
+Linux = linux founder is Linus tornads
+
+
+IpTables
+================
+iptables -L --line-numbers
+iptables -F = to flush the iptables
+iptables -A INPUT -j DROP = it will drop all the ports 
+iptables -A INPUT -p tcp --dport 22 -J REJECT
+iptables -A INPUT -p tcp --dport 22 -J ACCEPT
+iptables -D linenumber = to delete the Iptables
+
+
+

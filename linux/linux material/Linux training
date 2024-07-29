@@ -1,0 +1,99 @@
+Boot Proces:
+================
+
+
+Explaination of boot process
+=============================:
+
+post = power on self test = once power on the server it will check the periptherals properly connected or not if it connected it will give the helathy beepsound
+
+BIOS = basic input nd out put
+
+MBR = 512 bytes of
+
+grub = address of the bootable path 446 bytes 
+
+initrd = it mounts the /root filesystem and unmounts the ramdisk once all the models loads
+
+init path = /sbin/init 
+
+irrespective of init loads wor  /etc/rc.d/sysinit contains keyboard,lvm,raid,selinux etc ..
+
+by default 6 terimnals /etc/inittab
+
+after loading /etc/rc.local
+
+dd command syntax
+===================
+dd if=/dev/sda of=/outputfile bs=512 count =1
+
+for formating with zero bit
+==================================
+dd if=/dev/zero 
+
+Run levels
+=======================
+7 runlevels
+
+0 = poweroff
+1 - single usermode
+2 = multiuser mode withouut n/w
+3 = with n/w
+4 
+
+grub mode :
+================
+
+grub-md5-crypt = to put the password for grub
+
+rhgb = graphical 
+
+quiet = verbose mode 
+
+root=/bin/bash = to go direct to the bash shell
+
+kernel-doc = to finds the kernel models in the server 
+/usr/share/docs 
+
+
+
+========================
+
+boot issues
+=================
+
+1) Kernel panic issues
+===========================
+There are many scenerios to go ahead kernel 
+
+to fix the issues of kernel
+===============================
+boot with cd or network or usb
+
+go to rescue mode
+
+===========================
+LVM Topics
+==================
+pvcreate /dev/sdb1
+vgcreate testvg /dev/sdb1 
+vgextend -L +1g /dev/mapper/testvg_testlv
+
+lvm migration
+===================
+pvcreate /dev/sdc
+
+vgextend testvg /dev/sdc
+
+pvmove /dev/sdb1 /dev/sdc
+
+pvremove /dev/sdb1
+
+
+=========================
+fdisk ,parted,partx,partprobe,lsblk,blkid,tune2fs,dumpe2fs,e2label,mount,echo "---" > /sys/class/scsi_host/host{0,1}/scan
+
+
+chroot /mnt/sysimage
+
+

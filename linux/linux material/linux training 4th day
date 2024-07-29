@@ -1,0 +1,110 @@
+Stress
+======
+
+The above package to see the performance on the server
+
+cpu utilization and memory utilization in gui
+
+Cluster
+================
+
+differnce between san and iscsi
+
+the san is better perfomance compare to iscsi
+
+iscsi have depended on network so the network latency play the big role in the performance of the disk 
+
+using iscsi storage configuring the cluster
+==========================================
+
+package name is iscsi
+
+Target machine
+===================
+
+yum install scsci-target*
+
+cd /etc/tgt/
+
+vi targets.conf
+
+[root@node0 tgt]# ls -lrta targets.conf 
+-rw------- 1 root root 7047 Mar  9 13:00 targets.conf
+[root@node0 tgt]# pwd
+/etc/tgt
+
+under targets.conf
+
+#<target iqn.2008-09.com.example:iser>
+<target iqn.2017-09.com.master:iser.1>
+   backing-store /dev/sda
+#	Example: the next line would override default driver type.
+#	driver iser
+</target>
+
+To see the exported disk we need to run the below command
+
+#tgt-admin -s
+
+initiator machine
+====================
+
+yum install iscsi*
+  881  iscsiadm --mode discoverydb --type sendtargets --portal 192.168.122.106 --discover
+  882  iscsiadm --mode discoverydb --type sendtargets --portal 192.168.122.107 --discover
+  883  iscsiadm --mode node --targetname iqn.2017-09.com.master:iser.1 --portal 192.168.122.106 --login
+  884  iscsiadm --mode node --targetname iqn.2017-09.com.master:iser.1 --portal 192.168.122.107 --login
+  885  fdisk -l
+
+Multipath configuration
+========================
+
+yum install device-mapper-multipath*
+
+## Use user friendly names, instead of using WWIDs as names.
+defaults {
+         find_multipaths yes
+      	user_friendly_names yes
+
+}
+blacklist {
+}
+
+
+and restart the multipathd deamon
+
+
+Cluster
+=============
+quorum
+cman
+rgmanager
+coresync
+totemp
+qdisk
+fail_once
+
+Quorum:
+A quorum disk is the storage type of cluster configurations. It acts like a database which holds the data related to clustered environment 
+and duty of the quorum disk is to inform the cluster which node/nodes are to keep in ALIVE state.
+ It allows concurrent access to it from all the other nodes to read/write data.
+
+GFS : gloabal filesystem uses  Distributed Lock Mechanisam
+======
+login to cluster nodes
+============================
+
+clustat
+cat /etc/cluster/cluster.conf
+cman_tool status
+
+pvcreate /dev/mapper/mpatha1
+vgcreate -cy clustervg /dev/mapper/mpatha1
+lvcreate -n clusterlv --size 500M clustervg
+
+To create the GFS2 filesystem
+====================================
+
+mkfs.gfs2 -j 3 -p lock_dlm -t webcluster:clusterlv /dev/mapper/cluster-vg-clusterlv
+
+
